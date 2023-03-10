@@ -1,19 +1,28 @@
 /**
  * @file cson_test.c
  * @author Letter (NevermindZZT@gmail.com)
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2019-08-27
- * 
+ *
  * @copyright (c) 2019 Letter
- * 
+ *
  */
 
-#include "shell.h"
-#include "log.h"
+/*modified by zhouxin@20230310*/
+
 #include "cson.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdbool.h>
 
-
+#ifdef DMALLOC_DEBUG
+#include "dmalloc.h"
+#endif
+/************************************************************************/
+/*                                                                      */
+/************************************************************************/
+#if 1
 struct subtest
 {
     int id;
@@ -35,7 +44,7 @@ struct test
     char *subjson;
 };
 
-CsonModel subModel[] = 
+CsonModel subModel[] =
 {
     CSON_MODEL_OBJ(struct subtest),
     CSON_MODEL_INT(struct subtest, id),
@@ -43,7 +52,7 @@ CsonModel subModel[] =
 };
 
 
-CsonModel model[] = 
+CsonModel model[] =
 {
     CSON_MODEL_OBJ(struct test),
     CSON_MODEL_CHAR(struct test, id),
@@ -59,9 +68,6 @@ CsonModel model[] =
     CSON_MODEL_JSON(struct test, subjson)
 };
 
-
-
-
 void csonTest(void)
 {
     char *jsonStr = "{\"id\": 1, \"num\": 300, \"max\": 1000, \"value\": 10.3, \"name\": \"letter\", "
@@ -73,30 +79,30 @@ void csonTest(void)
     "\"subjson\":{\"test\": \"hello\"}}";
 
     struct test *st = csonDecode(jsonStr, model, sizeof(model)/sizeof(CsonModel));
-    logDebug("json 0x%08x, id: %d, num: %d, max: %d, value: %f, name: %s\r\nsub: id: %d, test: %s",
-        st, st->id, st->num, st->max, st->value, st->name, st->sub ? st->sub->id : 0, st->sub ? st->sub->test : "null");
-    logDebug("str: %s %s", st->str[0], st->str[1]);
+    printf("json 0x%08lx, id: %d, num: %d, max: %d, value: %f, name: %s\r\nsub: id: %d, test: %s\n",
+        (unsigned long)st, st->id, st->num, st->max, st->value, st->name, st->sub ? st->sub->id : 0, st->sub ? st->sub->test : "null");
+    printf("str: %s %s\n", st->str[0], st->str[1]);
     CsonList *p = st->list;
     while (p)
     {
         struct subtest *sst = p->obj;
         if (p->obj)
         {
-            logDebug("list: id: %d, test: %s", sst->id, sst->test);
+            printf("list: id: %d, test: %s\n", sst->id, sst->test);
         }
         else
         {
-            logDebug("list: null");
+            printf("list: null\n");
         }
         p = p->next;
     }
     p = st->charList;
     while (p)
     {
-        int sst = (int)(p->obj);
+        long sst = (long)(p->obj);
         if (p->obj)
         {
-            logDebug("list: int: %d", sst);
+            printf("list: long: %ld\n", sst);
         }
         p = p->next;
     }
@@ -106,66 +112,68 @@ void csonTest(void)
         char *sst = p->obj;
         if (p->obj)
         {
-            logDebug("list: str: %s", sst);
+            printf("list: str: %s\n", sst);
         }
         p = p->next;
     }
-    logDebug("subjson: %s", st->subjson);
+    printf("subjson: %s\n", st->subjson);
 
-    char *root = csonEncode(st, model, sizeof(model)/sizeof(CsonModel), 512, 0);
-    printf("encode: %s", root);
+    char *root = csonEncode(st, model, sizeof(model)/sizeof(CsonModel));
+    printf("encode: %s\n", root);
 
     csonFreeJson(root);
     csonFree(st, model, sizeof(model)/sizeof(CsonModel));
 }
-SHELL_EXPORT_CMD(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC),
-csonTest, csonTest, test);
-
+#endif
+/************************************************************************/
+/*                                                                      */
+/************************************************************************/
 
 /** 项目结构体 */
-struct project
+typedef struct
 {
-    int id;
-    char *name;
-};
+	z_int id;
+	z_string name;
+}project;
 
 /** 仓库结构体 */
-struct hub
+typedef struct
 {
-    int id;
-    char *user;
-    struct project *cson;
-};
+	z_bool id;
+    z_string user;
+    project *cson;
+}hub;
 
 /** 项目结构体数据模型 */
-CsonModel projectModel[] = 
+CsonModel projectModel[] =
 {
-    CSON_MODEL_OBJ(struct project),
-    CSON_MODEL_INT(struct project, id),
-    CSON_MODEL_STRING(struct project, name),
+    CSON_MODEL_OBJ(project),
+    CSON_MODEL_INT2(project, id, "id1"),
+    CSON_MODEL_STRING2(project, name, "name1"),
 };
 
 /** 仓库结构体数据模型 */
-CsonModel hubModel[] = 
+CsonModel hubModel[] =
 {
-    CSON_MODEL_OBJ(struct hub),
-    CSON_MODEL_INT(struct hub, id),
-    CSON_MODEL_STRING(struct hub, user),
-    CSON_MODEL_STRUCT(struct hub, cson, projectModel, sizeof(projectModel)/sizeof(CsonModel))
+    CSON_MODEL_OBJ(hub),
+    CSON_MODEL_BOOL(hub, id),
+    CSON_MODEL_STRING(hub, user),
+    CSON_MODEL_STRUCT(hub, cson, projectModel, sizeof(projectModel)/sizeof(CsonModel))
 };
 
 
 void csonDemo(void)
 {
-    char *jsonDemo = "{\"id\": 1, \"user\": \"Letter\", \"cson\": {\"id\": 2, \"name\": \"cson\"}}";
-    
+    char *jsonDemo = "{\"id\": false, \"user\": \"Letter\", \"cson\": {\"id1\": 2, \"name1\": \"cson\"}}";
+	//char *jsonDemo = "{\"id\": false, \"user\": \"Letter\", \"cson\": {\"name\": \"cson\"}}";
+	//char *jsonDemo = "{\"id\": false, \"cson\": {\"id\": 2, \"name\": \"cson\"}}";
     /** 解析json */
-    struct hub *pHub = csonDecode(jsonDemo, hubModel, sizeof(hubModel)/sizeof(CsonModel));
-    printf("hub: id: %d, user: %s, project id: %d, project name: %s\r\n",
-        pHub->id, pHub->user, pHub->cson->id, pHub->cson->name);
+    hub *pHub = csonDecode(jsonDemo, hubModel, sizeof(hubModel)/sizeof(CsonModel));
+    printf("hub: id: %d, user: %s, project id: %s, project name: %s\r\n",
+        pHub->id.data, pHub->user.flag == 1 ? pHub->user.data : "not exist", pHub->cson->id.flag == 1 ? "exist" : "not exist", pHub->cson->name.data);
 
     /** 序列化对象 */
-    char *formatJson = csonEncode(pHub, hubModel, sizeof(hubModel)/sizeof(CsonModel), 512, 1);
+    char *formatJson = csonEncode(pHub, hubModel, sizeof(hubModel)/sizeof(CsonModel));
     printf("format json: %s\r\n", formatJson);
 
     /** 释放结构体对象 */
@@ -174,5 +182,20 @@ void csonDemo(void)
     /** 释放序列化生成的json字符串 */
     csonFreeJson(formatJson);
 }
-SHELL_EXPORT_CMD(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC),
-csonDemo, csonDemo, test);
+
+/************************************************************************/
+/*                                                                      */
+/************************************************************************/
+
+int main(int argc, char* argv[])
+{
+
+#ifdef DMALLOC_DEBUG
+	dmalloc_debug_setup("debug=0x4e48503,inter=100,log=/tmp/dmalloc.log");
+#endif
+    csonInit(malloc, free);
+    csonDemo();
+    printf("\n");
+    //csonTest();
+    return 0;
+}

@@ -13,10 +13,59 @@
 #define __CSON_H__
 
 #include "stddef.h"
+#include "stdbool.h"
 #include "cJSON.h"
 
 
 #define     CSON_VERSION        "1.0.4"         /**< CSON版本 */
+
+typedef struct
+{
+	char data;
+	int flag;
+}z_char;
+
+typedef struct
+{
+	short data;
+	int flag;
+}z_short;
+
+typedef struct
+{
+	int data;
+	int flag;
+}z_int;
+
+typedef struct
+{
+	long data;
+	int flag;
+}z_long;
+
+typedef struct
+{
+	float data;
+	int flag;
+}z_float;
+
+typedef struct
+{
+	double data;
+	int flag;
+}z_double;
+
+typedef struct
+{
+	char* data;
+	int flag;
+}z_string;
+
+typedef struct
+{
+	bool data;
+	int flag;
+}z_bool;
 
 /**
  * @defgroup CSON cson
@@ -116,6 +165,15 @@ extern CsonModel csonBasicListModel[];  /**< 基础类型链表数据模型 */
         {CSON_TYPE_CHAR, #key, offsetof(type, key)}
 
 /**
+ * @brief char型数据模型
+ *
+ * @param type 对象模型
+ * @param key 数据键值
+ */
+#define CSON_MODEL_CHAR2(type, key, key_str) \
+        {CSON_TYPE_CHAR, key_str, offsetof(type, key)}
+
+/**
  * @brief short型数据模型
  * 
  * @param type 对象模型
@@ -123,6 +181,15 @@ extern CsonModel csonBasicListModel[];  /**< 基础类型链表数据模型 */
  */
 #define CSON_MODEL_SHORT(type, key) \
         {CSON_TYPE_SHORT, #key, offsetof(type, key)}
+
+/**
+ * @brief short型数据模型
+ *
+ * @param type 对象模型
+ * @param key 数据键值
+ */
+#define CSON_MODEL_SHORT2(type, key, key_str) \
+        {CSON_TYPE_SHORT, key_str, offsetof(type, key)}
 
 /**
  * @brief int型数据模型
@@ -134,6 +201,15 @@ extern CsonModel csonBasicListModel[];  /**< 基础类型链表数据模型 */
         {CSON_TYPE_INT, #key, offsetof(type, key)}
 
 /**
+ * @brief int型数据模型,不规范设计的json字段名使用
+ *
+ * @param type 对象模型
+ * @param key 数据键值
+ */
+#define CSON_MODEL_INT2(type, key, key_str) \
+        {CSON_TYPE_INT, key_str, offsetof(type, key)}
+
+/**
  * @brief long型数据模型
  * 
  * @param type 对象模型
@@ -141,6 +217,15 @@ extern CsonModel csonBasicListModel[];  /**< 基础类型链表数据模型 */
  */
 #define CSON_MODEL_LONG(type, key) \
         {CSON_TYPE_LONG, #key, offsetof(type, key)}
+
+/**
+ * @brief long型数据模型
+ *
+ * @param type 对象模型
+ * @param key 数据键值
+ */
+#define CSON_MODEL_LONG2(type, key, key_str) \
+        {CSON_TYPE_LONG, key_str, offsetof(type, key)}
 
 /**
  * @brief float型数据模型
@@ -152,6 +237,15 @@ extern CsonModel csonBasicListModel[];  /**< 基础类型链表数据模型 */
         {CSON_TYPE_FLOAT, #key, offsetof(type, key)}
 
 /**
+ * @brief float型数据模型
+ *
+ * @param type 对象模型
+ * @param key 数据键值
+ */
+#define CSON_MODEL_FLOAT2(type, key, key_str) \
+        {CSON_TYPE_FLOAT, key_str, offsetof(type, key)}
+
+/**
  * @brief double型数据模型
  * 
  * @param type 对象模型
@@ -161,13 +255,33 @@ extern CsonModel csonBasicListModel[];  /**< 基础类型链表数据模型 */
         {CSON_TYPE_DOUBLE, #key, offsetof(type, key)}
 
 /**
+ * @brief double型数据模型
+ *
+ * @param type 对象模型
+ * @param key 数据键值
+ */
+#define CSON_MODEL_DOUBLE2(type, key, key_str) \
+        {CSON_TYPE_DOUBLE, key_str, offsetof(type, key)}
+
+/**
  * @brief bool型数据模型
  * 
  * @param type 对象模型
  * @param key 数据键值
  */
 #define CSON_MODEL_BOOL(type, key) \
-        {CSON_TYPE_CHAR, #key, offsetof(type, key)}
+        {CSON_TYPE_BOOL, #key, offsetof(type, key)}	    //如果是false， true类型的，则用这个
+        //{CSON_TYPE_CHAR, #key, offsetof(type, key)}   //如果是0, 1类型的，则用这个
+
+/**
+ * @brief bool型数据模型
+ *
+ * @param type 对象模型
+ * @param key 数据键值
+ */
+#define CSON_MODEL_BOOL2(type, key, key_str) \
+        {CSON_TYPE_BOOL, key_str, offsetof(type, key)}	    //如果是false， true类型的，则用这个
+        //{CSON_TYPE_CHAR, key_str, offsetof(type, key)}   //如果是0, 1类型的，则用这个
 
 /**
  * @brief 字符串型数据模型
@@ -178,6 +292,16 @@ extern CsonModel csonBasicListModel[];  /**< 基础类型链表数据模型 */
 #define CSON_MODEL_STRING(type, key) \
         {CSON_TYPE_STRING, #key, offsetof(type, key)}
 
+
+/**
+ * @brief 字符串型数据模型, 不规范设计的json字段名使用
+ *
+ * @param type 对象模型
+ * @param key 数据键值
+ * @param key_str 数据键值
+ */
+#define CSON_MODEL_STRING2(type, key, key_str) \
+        {CSON_TYPE_STRING, key_str, offsetof(type, key)}
 /**
  * @brief 结构体型数据模型
  * 
@@ -300,7 +424,7 @@ cJSON* csonEncodeObject(void *obj, CsonModel *model, int modelSize);
  * @param fmt 是否格式化json字符串
  * @return char* 编码得到的json字符串
  */
-char* csonEncode(void *obj, CsonModel *model, int modelSize, int bufferSize, int fmt);
+char* csonEncode(void *obj, CsonModel *model, int modelSize);
 
 /**
  * @brief 编码成json字符串

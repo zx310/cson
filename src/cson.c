@@ -15,7 +15,6 @@
 #include "string.h"
 #include "stdio.h"
 
-
 /**
  * @brief 基本类型链表数据模型
  * 
@@ -78,12 +77,79 @@ signed char csonIsBasicListModel(CsonModel *model)
  */
 int csonDecodeNumber(cJSON *json, char *key)
 {
+	printf("[%s]key:%s\n", __func__, key);
     cJSON *item = key ? cJSON_GetObjectItem(json, key) : json;
     if (item && item->type == cJSON_Number)
     {
         return item->valueint;
     }
+    printf("[%s]no key found[%s]\n", __func__, key);
     return 0;
+}
+
+/**
+ * @brief 解析JSON整型
+ *
+ * @param json JSON对象
+ * @param key key
+ * @return int 解析出的整型数
+ */
+int csonDecodeNumber2(cJSON *json, char *key, void* data,  CsonType type)
+{
+	printf("[%s]key:%s\n", __func__, key);
+    cJSON *item = key ? cJSON_GetObjectItem(json, key) : json;
+    if (item && item->type == cJSON_Number)
+    {
+    	switch (type)
+		{
+		case CSON_TYPE_CHAR:
+			((z_char*)data)->data = (char)item->valueint;
+			((z_char*)data)->flag = 1;
+			break;
+		case CSON_TYPE_SHORT:
+			((z_short*)data)->data = (short)item->valueint;
+			((z_short*)data)->flag = 1;
+			break;
+		case CSON_TYPE_INT:
+			((z_int*)data)->data = (int)item->valueint;
+			((z_int*)data)->flag = 1;
+			break;
+		case CSON_TYPE_LONG:
+			((z_long*)data)->data = (int)item->valueint;
+			((z_long*)data)->flag = 1;
+			break;
+		default:
+			((z_int*)data)->data = (int)item->valueint;
+			((z_int*)data)->flag = 1;
+			break;
+		}
+    	return 0;
+    }
+    printf("[%s]no key found[%s]\n", __func__, key);
+    switch (type)
+	{
+	case CSON_TYPE_CHAR:
+		((z_char*)data)->data = 0;
+		((z_char*)data)->flag = 0;
+		break;
+	case CSON_TYPE_SHORT:
+		((z_short*)data)->data = 0;
+		((z_short*)data)->flag = 1;
+		break;
+	case CSON_TYPE_INT:
+		((z_int*)data)->data = 0;
+		((z_int*)data)->flag = 1;
+		break;
+	case CSON_TYPE_LONG:
+		((z_long*)data)->data = 0;
+		((z_long*)data)->flag = 1;
+		break;
+	default:
+		((z_int*)data)->data = 0;
+		((z_int*)data)->flag = 1;
+		break;
+	}
+    return -1;
 }
 
 
@@ -101,6 +167,53 @@ double csonDecodeDouble(cJSON *json, char *key)
     {
         return item->valuedouble;
     }
+    return 0.0;
+}
+
+/**
+ * @brief 解析JSON浮点型
+ *
+ * @param json JSON对象
+ * @param key key
+ * @return double 解析出的浮点型数
+ */
+double csonDecodeDouble2(cJSON *json, char *key, void* data, CsonType type)
+{
+    cJSON *item = key ? cJSON_GetObjectItem(json, key) : json;
+    if (item && item->type == cJSON_Number)
+    {
+    	switch(type)
+    	{
+    	 	case CSON_TYPE_FLOAT:
+    	 		((z_float*)data)->data = (float)item->valuedouble;
+    	 		((z_float*)data)->flag = 1;
+    	 		break;
+    	    case CSON_TYPE_DOUBLE:
+    	    	((z_double*)data)->data = (float)item->valuedouble;
+    	    	((z_double*)data)->flag = 1;
+    	    	break;
+    	    default:
+    	    	((z_double*)data)->data = (float)item->valuedouble;
+    	    	((z_double*)data)->flag = 1;
+    	    	break;
+    	}
+        return item->valuedouble;
+    }
+    switch(type)
+	{
+		case CSON_TYPE_FLOAT:
+			((z_float*)data)->data = 0.0f;
+			((z_float*)data)->flag = 0;
+			break;
+		case CSON_TYPE_DOUBLE:
+			((z_double*)data)->data = 0.0f;
+			((z_double*)data)->flag = 0;
+			break;
+		default:
+			((z_double*)data)->data = 0.0f;
+			((z_double*)data)->flag = 0;
+			break;
+	}
     return 0.0;
 }
 
@@ -136,6 +249,41 @@ char* csonDecodeString(cJSON *json, char *key)
     return NULL;
 }
 
+/**
+ * @brief 解析JSON字符串数据
+ *
+ * @param json JSON对象
+ * @param key key
+ * @return char* 解析出的字符串
+ */
+char* csonDecodeString2(cJSON *json, char *key, z_string* data)
+{
+    char *str = NULL;
+    short strLen = 0;
+    cJSON *item = key ? cJSON_GetObjectItem(json, key) : json;
+    if (item && item->type == cJSON_String)
+    {
+        str = item->valuestring;
+        if (item->valuestring)
+        {
+        	strLen = strlen(str);
+			data->data = cson.malloc(strLen + 1);
+			if (data->data)
+			{
+				memcpy((void *)data->data, (void *)str, strLen);
+				*(data->data + strLen) = 0;
+				data->flag = 1;
+				return data->data;
+			}
+			data->flag = 0;
+			return NULL;
+        }
+    }
+    data->data = NULL;
+    data->flag = 0;
+    return NULL;
+}
+
 
 /**
  * @brief 解析JOSN布尔型数据
@@ -146,11 +294,34 @@ char* csonDecodeString(cJSON *json, char *key)
  */
 char csonDecodeBool(cJSON *json, char *key)
 {
+	printf("[%s]key:%s\n", __func__, key);
     cJSON *item = cJSON_GetObjectItem(json, key);
     if (item && item->type == cJSON_True)
     {
         return 1;
     }
+    return 0;
+}
+
+/**
+ * @brief 解析JOSN布尔型数据
+ *
+ * @param json JSON对象
+ * @param key key
+ * @return char 解析出的bool
+ */
+char csonDecodeBool2(cJSON *json, char *key, z_bool* data)
+{
+	printf("[%s]key:%s\n", __func__, key);
+    cJSON *item = cJSON_GetObjectItem(json, key);
+    if (item && item->type == cJSON_True)
+    {
+    	data->data = 1;
+    	data->flag = 1;
+        return 1;
+    }
+    data->data = 0;
+    data->flag = 0;
     return 0;
 }
 
@@ -171,12 +342,13 @@ void *csonDecodeList(cJSON *json, char *key, CsonModel *model, int modelSize)
 
     if (array && array->type == cJSON_Array)
     {
-        for (short i = 0; i < cJSON_GetArraySize(array); i++)
+    	short i = 0;
+        for (i = 0; i < cJSON_GetArraySize(array); i++)
         {
             void *obj = csonDecodeObject(cJSON_GetArrayItem(array, i), model, modelSize);
             if (csonIsBasicListModel(model))
             {
-                list = csonListAdd(list, (void *)(*((int *)obj)));
+                list = csonListAdd(list, (void *)(*((size_t *)obj)));
                 cson.free(obj);
             }
             else
@@ -207,35 +379,36 @@ void csonDecodeArray(cJSON *json, char *key, void * base, CsonType elementType, 
 
     if (array && array->type == cJSON_Array)
     {
-        for (short i = 0; i < cJSON_GetArraySize(array); i++)
+    	short i = 0;
+        for (i = 0; i < cJSON_GetArraySize(array); i++)
         {
             item = cJSON_GetArrayItem(array, i);
             switch (elementType)
             {
             case CSON_TYPE_CHAR:
-                *(char *)((int)base + (i * sizeof(char))) = (char)item->valueint;
+                *(char *)((size_t)base + (i * sizeof(char))) = (char)item->valueint;
                 break;
             case CSON_TYPE_SHORT:
-                *(short *)((int)base + (i * sizeof(short))) = (short)item->valueint;
+                *(short *)((size_t)base + (i * sizeof(short))) = (short)item->valueint;
                 break;
             case CSON_TYPE_INT:
-                *(int *)((int)base + (i * sizeof(int))) = (int)item->valueint;
+                *(int *)((size_t)base + (i * sizeof(int))) = (int)item->valueint;
                 break;
             case CSON_TYPE_LONG:
-                *(long *)((int)base + (i * sizeof(long))) = (long)item->valueint;
+                *(long *)((size_t)base + (i * sizeof(long))) = (long)item->valueint;
                 break;
             case CSON_TYPE_FLOAT:
-                *(float *)((int)base + (i * sizeof(float))) = (float)item->valuedouble;
+                *(float *)((size_t)base + (i * sizeof(float))) = (float)item->valuedouble;
                 break;
             case CSON_TYPE_DOUBLE:
-                *(double *)((int)base + (i * sizeof(double))) = (double)item->valuedouble;
+                *(double *)((size_t)base + (i * sizeof(double))) = (double)item->valuedouble;
                 break;
             case CSON_TYPE_STRING:
                 strLen = strlen(item->valuestring);
                 str = cson.malloc(strLen + 1);
                 memcpy(str, item->valuestring, strLen);
                 *(str + strLen) = 0;
-                *(int *)((int)base + (i * sizeof(int))) = (int)str;
+                *(size_t *)((size_t)base + (i * sizeof(size_t))) = (size_t)str;
                 break;
             default:
                 break;
@@ -262,7 +435,9 @@ void *csonDecodeObject(cJSON *json, CsonModel *model, int modelSize)
     }
 
     short objSize = 0;
-    for (short i = 0; i < modelSize; i++)
+    short i = 0;
+
+    for (i = 0; i < modelSize; i++)
     {
         if (model[i].type == CSON_TYPE_OBJ)
         {
@@ -272,49 +447,41 @@ void *csonDecodeObject(cJSON *json, CsonModel *model, int modelSize)
     void *obj = cson.malloc(objSize);
     CSON_ASSERT(obj, return NULL);
 
-    for (short i = 0; i < modelSize; i++)
+    for (i = 0; i < modelSize; i++)
     {
         switch (model[i].type)
         {
         case CSON_TYPE_CHAR:
-            *(char *)((int)obj + model[i].offset) = (char)csonDecodeNumber(json, model[i].key);
-            break;
         case CSON_TYPE_SHORT:
-            *(short *)((int)obj + model[i].offset) = (short)csonDecodeNumber(json, model[i].key);
-            break;
         case CSON_TYPE_INT:
-            *(int *)((int)obj + model[i].offset) = (int)csonDecodeNumber(json, model[i].key);
-            break;
         case CSON_TYPE_LONG:
-            *(long *)((int)obj + model[i].offset) = (long)csonDecodeNumber(json, model[i].key);
+        	csonDecodeNumber2(json, model[i].key, (void *)((size_t)obj + model[i].offset), model[i].type);
             break;
         case CSON_TYPE_FLOAT:
-            *(float *)((int)obj + model[i].offset) = (float)csonDecodeDouble(json, model[i].key);
-            break;
         case CSON_TYPE_DOUBLE:
-            *(double *)((int)obj + model[i].offset) = csonDecodeDouble(json, model[i].key);
+           csonDecodeDouble2(json, model[i].key,  (void *)((size_t)obj + model[i].offset), model[i].type);
             break;
         case CSON_TYPE_BOOL:
-            *(char *)((int)obj + model[i].offset) = (char)csonDecodeBool(json, model[i].key);
+        	csonDecodeBool2(json, model[i].key, (z_bool*)((size_t)obj + model[i].offset));
             break;
         case CSON_TYPE_STRING:
-            *(int *)((int)obj + model[i].offset) = (int)csonDecodeString(json, model[i].key);
+        	csonDecodeString2(json, model[i].key, (z_string *)(((size_t)obj + model[i].offset)));
             break;
         case CSON_TYPE_LIST:
-            *(int *)((int)obj + model[i].offset) = (int)csonDecodeList(json,
+            *(size_t *)((size_t)obj + model[i].offset) = (size_t)csonDecodeList(json,
             model[i].key, model[i].param.sub.model, model[i].param.sub.size);
             break;
         case CSON_TYPE_STRUCT:
-            *(int *)((int)obj + model[i].offset) = (int)csonDecodeObject(
+            *(size_t *)((size_t)obj + model[i].offset) = (size_t)csonDecodeObject(
                 cJSON_GetObjectItem(json, model[i].key), 
                 model[i].param.sub.model, model[i].param.sub.size);
             break;
         case CSON_TYPE_ARRAY:
-            csonDecodeArray(json, model[i].key, (void *)((int)obj + model[i].offset), 
+            csonDecodeArray(json, model[i].key, (void *)((size_t)obj + model[i].offset), 
                 model[i].param.array.eleType, model[i].param.array.size);
             break;
         case CSON_TYPE_JSON:
-            *(int *)((int)obj + model[i].offset) = (int)cJSON_PrintUnformatted(
+            *(size_t *)((size_t)obj + model[i].offset) = (size_t)cJSON_PrintUnformatted(
                 cJSON_GetObjectItem(json, model[i].key));
             break;
         default:
@@ -374,6 +541,17 @@ void csonEncodeNumber(cJSON *json, char *key, double num)
  * @param key key
  * @param str 字符串
  */
+static char* csonEncodeString_strdup(const char* str)
+{
+      size_t len;
+      char* copy;
+
+      len = strlen(str) + 1;
+      if (!(copy = (char*)cson.malloc(len))) return 0;
+      memcpy(copy,str,len);
+      return copy;
+}
+
 void csonEncodeString(cJSON *json, char *key, char *str)
 {
     if (key)
@@ -383,7 +561,7 @@ void csonEncodeString(cJSON *json, char *key, char *str)
     else
     {
         json->type = cJSON_String;
-        json->valuestring = str;
+        json->valuestring = csonEncodeString_strdup(str);  
     }
 }
 
@@ -434,31 +612,31 @@ cJSON* csonEncodeArray(void *base, CsonType elementType, short arraySize)
 {
     cJSON *root = cJSON_CreateArray();
     cJSON *item;
-
-    for (short i = 0; i < arraySize; i++)
+    short i = 0;
+    for (i = 0; i < arraySize; i++)
     {
         switch (elementType)
         {
         case CSON_TYPE_CHAR:
-            item = cJSON_CreateNumber(*(char *)((int)base + (i * sizeof(char))));
+            item = cJSON_CreateNumber(*(char *)((size_t)base + (i * sizeof(char))));
             break;
         case CSON_TYPE_SHORT:
-            item = cJSON_CreateNumber(*(short *)((int)base + (i * sizeof(short))));
+            item = cJSON_CreateNumber(*(short *)((size_t)base + (i * sizeof(short))));
             break;
         case CSON_TYPE_INT:
-            item = cJSON_CreateNumber(*(int *)((int)base + (i * sizeof(int))));
+            item = cJSON_CreateNumber(*(int *)((size_t)base + (i * sizeof(int))));
             break;
         case CSON_TYPE_LONG:
-            item = cJSON_CreateNumber(*(long *)((int)base + (i * sizeof(int))));
+            item = cJSON_CreateNumber(*(long *)((size_t)base + (i * sizeof(long))));
             break;
         case CSON_TYPE_FLOAT:
-            item = cJSON_CreateNumber(*(float *)((int)base + (i * sizeof(float))));
+            item = cJSON_CreateNumber(*(float *)((size_t)base + (i * sizeof(float))));
             break;
         case CSON_TYPE_DOUBLE:
-            item = cJSON_CreateNumber(*(double *)((int)base + (i * sizeof(double))));
+            item = cJSON_CreateNumber(*(double *)((size_t)base + (i * sizeof(double))));
             break;
         case CSON_TYPE_STRING:
-            item = cJSON_CreateString((char *)*(int *)((int)base + (i * sizeof(int))));
+            item = cJSON_CreateString((char *)*(size_t *)((size_t)base + (i * sizeof(size_t))));
             break;
         default:
             break;
@@ -483,64 +661,66 @@ cJSON* csonEncodeObject(void *obj, CsonModel *model, int modelSize)
         return cJSON_CreateNull();
     }
     cJSON *root = cJSON_CreateObject();
+    short i = 0;
 
-    for (short i = 0; i < modelSize; i++)
+    for (i = 0; i < modelSize; i++)
     {
         switch (model[i].type)
         {
         case CSON_TYPE_CHAR:
-            csonEncodeNumber(root, model[i].key, *(char *)((int)obj + model[i].offset));
+            csonEncodeNumber(root, model[i].key, *(char *)((size_t)obj + model[i].offset));
             break;
         case CSON_TYPE_SHORT:
-            csonEncodeNumber(root, model[i].key, *(short *)((int)obj + model[i].offset));
+            csonEncodeNumber(root, model[i].key, *(short *)((size_t)obj + model[i].offset));
             break;
         case CSON_TYPE_INT:
-            csonEncodeNumber(root, model[i].key, *(int *)((int)obj + model[i].offset));
+            csonEncodeNumber(root, model[i].key, *(int *)((size_t)obj + model[i].offset));
             break;
         case CSON_TYPE_LONG:
-            csonEncodeNumber(root, model[i].key, *(long *)((int)obj + model[i].offset));
+            csonEncodeNumber(root, model[i].key, *(long *)((size_t)obj + model[i].offset));
             break;
         case CSON_TYPE_FLOAT:
-            csonEncodeNumber(root, model[i].key, *(float *)((int)obj + model[i].offset));
+            csonEncodeNumber(root, model[i].key, *(float *)((size_t)obj + model[i].offset));
             break;
         case CSON_TYPE_DOUBLE:
-            csonEncodeNumber(root, model[i].key, *(double *)((int)obj + model[i].offset));
+            csonEncodeNumber(root, model[i].key, *(double *)((size_t)obj + model[i].offset));
             break;
         case CSON_TYPE_BOOL:
-            cJSON_AddBoolToObject(root, model[i].key, *(char *)((int)obj + model[i].offset));
+            cJSON_AddBoolToObject(root, model[i].key, *(char *)((size_t)obj + model[i].offset)); //如果是false， true类型的，则用这个
+//            cJSON_AddBoolToObject(root, model[i].key, *(char *)((size_t)obj + model[i].offset)); //如果是0, 1类型的，则用这个
             break;
         case CSON_TYPE_STRING:
-            if ((char *)(*(int *)((int)obj + model[i].offset)))
+            if ((char *)(*(size_t *)((size_t)obj + model[i].offset)))
             {
-                csonEncodeString(root, model[i].key, (char *)(*(int *)((int)obj + model[i].offset)));
+                csonEncodeString(root, model[i].key, (char *)(*(size_t *)((size_t)obj + model[i].offset)));
             }
             break;
         case CSON_TYPE_LIST:
-            if ((CsonList *)*(int *)((int)obj + model[i].offset))
+            if ((CsonList *)*(size_t *)((size_t)obj + model[i].offset))
             {
                 cJSON_AddItemToObject(root, model[i].key, 
-                    csonEncodeList((CsonList *)*(int *)((int)obj + model[i].offset),
+                    csonEncodeList((CsonList *)*(size_t *)((size_t)obj + model[i].offset),
                         model[i].param.sub.model, model[i].param.sub.size));
             }
             break;
         case CSON_TYPE_STRUCT:
-            if ((void *)(*(int *)((int)obj + model[i].offset)))
+            if ((void *)(*(size_t *)((size_t)obj + model[i].offset)))
             {
                 cJSON_AddItemToObject(root, model[i].key, csonEncodeObject(
-                    (void *)(*(int *)((int)obj + model[i].offset)),
+                    (void *)(*(size_t *)((size_t)obj + model[i].offset)),
                     model[i].param.sub.model, model[i].param.sub.size));
             }
             break;
         case CSON_TYPE_ARRAY:
             cJSON_AddItemToObject(root, model[i].key, csonEncodeArray(
-                (void *)((int)obj + model[i].offset),
+                (void *)((size_t)obj + model[i].offset),
                 model[i].param.array.eleType, model[i].param.array.size));
             break;
         case CSON_TYPE_JSON:
-            if ((char *)(*(int *)((int)obj + model[i].offset)))
+            if ((char *)(*(size_t *)((size_t)obj + model[i].offset)))
             {
                 cJSON_AddItemToObject(root, model[i].key, 
-                    cJSON_Parse((char *)(*(int *)((int)obj + model[i].offset))));
+                    cJSON_Parse((char *)(*(size_t *)((size_t)obj + model[i].offset))));
             }
             break;
         default:
@@ -561,11 +741,11 @@ cJSON* csonEncodeObject(void *obj, CsonModel *model, int modelSize)
  * @param fmt 是否格式化json字符串
  * @return char* 编码得到的json字符串
  */
-char* csonEncode(void *obj, CsonModel *model, int modelSize, int bufferSize, int fmt)
+char* csonEncode(void *obj, CsonModel *model, int modelSize)
 {
     cJSON *json = csonEncodeObject(obj, model, modelSize);
     CSON_ASSERT(json, return NULL);
-    char *jsonStr = cJSON_PrintBuffered(json, bufferSize, fmt);
+    char *jsonStr = cJSON_Print(json);
     cJSON_Delete(json);
     return jsonStr;
 }
@@ -599,9 +779,10 @@ char* csonEncodeUnformatted(void *obj, CsonModel *model, int modelSize)
 void csonFree(void *obj, CsonModel *model, int modelSize)
 {
     CsonList *list, *p;
-    int *tmpNode;
+    size_t *tmpNode;
+    short i = 0;
 
-    for (short i = 0; i < modelSize; i++)
+    for (i = 0; i < modelSize; i++)
     {
         switch ((int)model[i].type)
         {
@@ -614,10 +795,10 @@ void csonFree(void *obj, CsonModel *model, int modelSize)
             break;
         case CSON_TYPE_STRING:
         case CSON_TYPE_JSON:
-            cson.free((char *)(*(int *)((int)obj + model[i].offset)));
+            cson.free(((z_string *)((size_t)obj + model[i].offset))->data);
             break;
         case CSON_TYPE_LIST:
-            list = (CsonList *)*(int *)((int)obj + model[i].offset);
+            list = (CsonList *)*(size_t *)((size_t)obj + model[i].offset);
             while (list)
             {
                 p = list;
@@ -626,8 +807,8 @@ void csonFree(void *obj, CsonModel *model, int modelSize)
                 {
                     if (csonIsBasicListModel(model[i].param.sub.model))
                     {
-                        tmpNode = cson.malloc(sizeof(int));
-                        *tmpNode = (int)(&(p->obj));
+                        tmpNode = cson.malloc(sizeof(size_t));
+                        *tmpNode = (size_t)(p->obj);
                     }
                     else
                     {
@@ -640,17 +821,18 @@ void csonFree(void *obj, CsonModel *model, int modelSize)
             }
             break;
         case CSON_TYPE_STRUCT:
-            csonFree((void *)(*(int *)((int)obj + model[i].offset)), 
+            csonFree((void *)(*(size_t *)((size_t)obj + model[i].offset)), 
                 model[i].param.sub.model, model[i].param.sub.size);
             break;
         case CSON_TYPE_ARRAY:
             if (model[i].param.array.eleType == CSON_TYPE_STRING)
             {
-                for (short j = 0; j< model[i].param.array.size; j++)
+            	short j = 0;
+                for (j = 0; j< model[i].param.array.size; j++)
                 {
-                    if (*(int *)((int)obj + model[i].offset + (j << 2)))
+                    if (*(size_t *)((size_t)obj + model[i].offset + (j << 2)))
                     {
-                        cson.free((void *)*(int *)((int)obj + model[i].offset + (j << 2)));
+                        cson.free((void *)*(size_t *)((size_t)obj + model[i].offset + (j << 2)));
                     }
                 }
             }
